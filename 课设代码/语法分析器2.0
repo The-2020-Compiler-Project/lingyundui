@@ -1,0 +1,523 @@
+#include <iostream>
+#include <fstream>
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+
+using namespace std;
+
+
+char KT[1001][20]={ "" };//关键字表
+int KTSize=0;
+char IT[1001][20] = { "" };//标识符表
+int ITSize = 0;
+char charT[1001] = { "" };//单个字符表
+int charTSize = 0;
+char ST[1001][20] = { "" };//字符串表
+int STSize = 0;
+char constT[1001][20] = { "" };//常数表
+int constTSize = 0;
+char PT[1001][20] = { "" };//界符表
+int PTSize=0;
+int maxlen=30;
+
+struct token//token结构体
+{
+    string type;
+    int typeTSize;
+};
+token KTtoken[50];
+token ITtoken[50];
+token charTtoken[50];
+token STtoken[50];
+token constTtoken[50];
+token PTtoken[50];
+token Token[100];
+
+
+static char reserveWord[57][20] =
+{
+    "auto", "break", "bool","case","catch", "char","class", "const",
+    "continue", "default", "define", "delete", "do", "double", "else",
+    "enum","explicit","export", "extern","false", "float", "for",
+    "friend", "goto", "if", "inline", "int", "long", "main","namespace",
+    "new", "operator", "private", "protected", "public""register",
+    "return", "short", "signed", "sizeof", "static","struct", "switch",
+    "template", "this", "throw", "true", "try", "typedef", "typename",
+    "union", "unsigned", "using","virtual", "void","volatile", "while"
+};
+
+bool isLetter( char ch )//判断是否为字母
+{
+    if ( ( ch >= 'a' && ch <= 'z' ) || ( ch >= 'A' && ch <= 'Z' ) || ( ch == '_' ) )
+    {
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+}
+
+bool isDigit( char ch )//判断是否为数字
+{
+    if ( ch >= '0' && ch <= '9' )
+    {
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+}
+
+int Search(char a[][20],char word[])//观察当前单词是否在表中已经存在，若不存在则加入其中
+{
+    for(int i=0;a[i][0]!='\0';i++)
+    {
+        if(strcmp(a[i],word)==0)
+            return i+1;
+    }
+    return -1;
+}
+
+void readAWord(int &state,char code[],char word[],int &codePointer,int &num)//判断当前单词属于哪个表
+{
+    int i,count=0,number;
+    char ch;
+    ch=code[codePointer];
+    if(ch=='\n')
+    {
+        cout<<endl;
+        codePointer++;
+    }
+    else
+    {
+    while(ch==' ')//使当前codepointer指向不为空的字节
+    {
+        codePointer++;
+        ch=code[codePointer];
+    }
+    for(i=0;i<20;i++)
+    {
+        word[i]='\0';
+    }
+    if(isLetter(code[codePointer]))//判断是否为单词
+    {
+        word[0]=code[codePointer];
+        while(isLetter(code[codePointer])||isDigit(code[codePointer]))
+        {
+            word[count]=code[codePointer];
+            count++;
+            codePointer++;
+        }
+        word[count]='\0';
+        state=Search(reserveWord,word);
+        if(state==-1)
+        {
+            number=Search(IT,word);
+            if(number==-1)
+            {
+                strcpy(IT[ITSize++],word);
+                number=ITSize;
+            }
+            ITtoken[number].type="IT";
+            ITtoken[number].typeTSize=number;
+            Token[num].type="IT";
+            Token[num].typeTSize=number;
+            num++;
+            cout<<"("<<ITtoken[number].type<<","<<ITtoken[number].typeTSize<<"),";
+        }
+        else
+        {
+            number=Search(KT,word);
+            if(number==-1)
+            {
+                strcpy(KT[KTSize++],word);
+                number=KTSize;
+            }
+            KTtoken[number].type="KT";
+            KTtoken[number].typeTSize=number;
+            Token[num].type="KT";
+            Token[num].typeTSize=number;
+            num++;
+            cout<<"("<<KTtoken[number].type<<","<<KTtoken[number].typeTSize<<"),";
+        }
+    }
+    else if(isDigit(code[codePointer]))//判断是否为数字
+    {
+        word[0]=code[codePointer];
+        while(isDigit(code[codePointer]))
+        {
+            word[count]=code[codePointer];
+            count++;
+            codePointer++;
+        }
+        if(code[codePointer]=='.')
+        {
+            word[count]=code[codePointer];
+            count++;
+            codePointer++;
+            while(isDigit(code[codePointer]))
+            {
+                word[count]=code[codePointer];
+                count++;
+                codePointer++;
+            }
+        }
+        word[count]='\0';
+        state=Search(constT,word);
+        if(state==-1)
+        {
+            strcpy(constT[constTSize++],word);
+            state=constTSize;
+        }
+        constTtoken[state].type="constT";
+        constTtoken[state].typeTSize=state;
+        Token[num].type="constT";
+        Token[num].typeTSize=state;
+        num++;
+        cout<<"("<<constTtoken[state].type<<","<<constTtoken[state].typeTSize<<"),";
+    }
+    else if(code[codePointer]=='"')//判断是否为字符串
+    {
+        word[0]=code[codePointer];
+        word[1]='\0';
+        number=Search(PT,word);
+        if(number==-1)
+        {
+            PT[PTSize++][0]='"';
+            number=PTSize;
+        }
+        PTtoken[number].type="PT";
+        PTtoken[number].typeTSize=number;
+        Token[num].type="PT";
+        Token[num].typeTSize=number;
+        num++;
+        cout<<"("<<PTtoken[number].type<<","<<PTtoken[number].typeTSize<<"),";
+        codePointer++;
+        while(code[codePointer]!='"')
+        {
+            word[count]=code[codePointer];
+            count++;
+            codePointer++;
+        }
+        word[count]='\0';
+        state=Search(ST,word);
+        if(state==-1)
+        {
+            strcpy(ST[STSize],word);
+            STSize++;
+            state=STSize;
+        }
+        STtoken[state].type="ST";
+        STtoken[state].typeTSize=state;
+        Token[num].type="ST";
+        Token[num].typeTSize=state;
+        num++;
+        cout<<"("<<STtoken[state].type<<","<<STtoken[state].typeTSize<<"),";
+        PTtoken[number].type="PT";
+        PTtoken[number].typeTSize=number;
+        Token[num].type="PT";
+        Token[num].typeTSize=number;
+        num++;
+        cout<<"("<<PTtoken[number].type<<","<<PTtoken[number].typeTSize<<"),";
+        codePointer++;
+    }
+    else if(code[codePointer]=='\'')//判断是否为单个字符
+    {
+        word[0]=code[codePointer];
+        word[1]='\0';
+        number=Search(PT,word);
+        if(number==-1)
+        {
+            PT[PTSize++][0]='\'';
+            number=PTSize;
+        }
+        PTtoken[number].type="PT";
+        PTtoken[number].typeTSize=number;
+        Token[num].type="PT";
+        Token[num].typeTSize=number;
+        num++;
+        cout<<"("<<PTtoken[number].type<<","<<PTtoken[number].typeTSize<<"),";
+        codePointer++;
+        for(state=0;state<charTSize;state++)
+        {
+            if(code[codePointer]==charT[state])
+            {
+                break;
+            }
+        }
+        if(state==charTSize)
+        {
+            charT[charTSize]=code[codePointer];
+            charTSize++;
+            state=charTSize;
+        }
+        charTtoken[state].type="charT";
+        charTtoken[state].typeTSize=state;
+        Token[num].type="charT";
+        Token[num].typeTSize=number;
+        num++;
+        cout<<"("<<charTtoken[state].type<<","<<charTtoken[state].typeTSize<<"),";
+        PTtoken[number].type="PT";
+        PTtoken[number].typeTSize=number;
+        Token[num].type="PT";
+        Token[num].typeTSize=number;
+        num++;
+        cout<<"("<<PTtoken[number].type<<","<<PTtoken[number].typeTSize<<"),";
+        codePointer=codePointer+2;
+    }
+    else if(ch==';'||ch=='('||ch==')'||ch=='{'||ch=='}'||ch=='@'||
+            ch==','||ch=='.'||ch=='?'||ch=='\''||ch==':'||ch=='#'||
+            ch=='['||ch==']'||ch=='%'||ch=='^')//判断是否为单界符
+    {
+        word[0]=code[codePointer];
+        word[1]='\0';
+        number=Search(PT,word);
+        if(number==-1)
+        {
+            strcpy(PT[PTSize],word);
+            PTSize++;
+            number=PTSize;
+        }
+        PTtoken[number].type="PT";
+        PTtoken[number].typeTSize=number;
+        Token[num].type="PT";
+        Token[num].typeTSize=number;
+        num++;
+        cout<<"("<<PTtoken[number].type<<","<<PTtoken[number].typeTSize<<"),";
+        codePointer++;
+    }
+    else if(code[codePointer]=='>')//两个字节的运算符'>='或'>>'
+    {
+        word[0]=code[codePointer];
+        if(code[codePointer+1]=='='||code[codePointer+1]=='>')
+        {
+            word[1]=code[++codePointer];
+        }
+        else
+        {
+            word[1]='\0';
+        }
+        number=Search(PT,word);
+        if(number==-1)
+        {
+            strcpy(PT[PTSize],word);
+            PTSize++;
+            number=PTSize;
+        }
+        PTtoken[number].type="PT";
+        PTtoken[number].typeTSize=number;
+        Token[num].type="PT";
+        Token[num].typeTSize=number;
+        num++;
+        cout<<"("<<PTtoken[number].type<<","<<PTtoken[number].typeTSize<<"),";
+        codePointer++;
+    }
+    else if(code[codePointer]=='<')//两个字节的运算符'<='或'<<'
+    {
+        word[0]=code[codePointer];
+        if(code[codePointer+1]=='='||code[codePointer+1]=='<')
+        {
+            word[1]=code[++codePointer];
+        }
+        else
+        {
+            word[1]='\0';
+        }
+        number=Search(PT,word);
+        if(number==-1)
+        {
+            strcpy(PT[PTSize],word);
+            PTSize++;
+            number=PTSize;
+        }
+        PTtoken[number].type="PT";
+        PTtoken[number].typeTSize=number;
+        Token[num].type="PT";
+        Token[num].typeTSize=number;
+        num++;
+        cout<<"("<<PTtoken[number].type<<","<<PTtoken[number].typeTSize<<"),";
+        codePointer++;
+    }
+    else if(code[codePointer]=='=')//两个字节的运算符'=='
+    {
+        word[0]=code[codePointer];
+        if(code[codePointer+1]=='=')
+        {
+            word[1]=code[++codePointer];
+        }
+        else
+        {
+            word[1]='\0';
+        }
+        number=Search(PT,word);
+        if(number==-1)
+        {
+            strcpy(PT[PTSize],word);
+            PTSize++;
+            number=PTSize;
+        }
+        PTtoken[number].type="PT";
+        PTtoken[number].typeTSize=number;
+        Token[num].type="PT";
+        Token[num].typeTSize=number;
+        num++;
+        cout<<"("<<PTtoken[number].type<<","<<PTtoken[number].typeTSize<<"),";
+        codePointer++;
+    }
+    else if(code[codePointer]=='!')//两个字节的运算符'!='
+    {
+        word[0]=code[codePointer];
+        if(code[codePointer+1]=='=')
+        {
+            word[1]=code[++codePointer];
+        }
+        else
+        {
+            word[1]='\0';
+        }
+        number=Search(PT,word);
+        if(number==-1)
+        {
+            strcpy(PT[PTSize],word);
+            PTSize++;
+            number=PTSize;
+        }
+        PTtoken[number].type="PT";
+        PTtoken[number].typeTSize=number;
+        Token[num].type="PT";
+        Token[num].typeTSize=number;
+        num++;
+        cout<<"("<<PTtoken[number].type<<","<<PTtoken[number].typeTSize<<"),";
+        codePointer++;
+    }
+    else if(code[codePointer]=='&')//两个字节的运算符'&&'
+    {
+        word[0]=code[codePointer];
+        if(code[codePointer+1]=='&')
+        {
+            word[1]=code[++codePointer];
+        }
+        else
+        {
+            word[1]='\0';
+        }
+        number=Search(PT,word);
+        if(number==-1)
+        {
+            strcpy(PT[PTSize],word);
+            PTSize++;
+            number=PTSize;
+        }
+        PTtoken[number].type="PT";
+        PTtoken[number].typeTSize=number;
+        Token[num].type="PT";
+        Token[num].typeTSize=number;
+        num++;
+        cout<<"("<<PTtoken[number].type<<","<<PTtoken[number].typeTSize<<"),";
+        codePointer++;
+    }
+    else if(code[codePointer]=='|')//两个字节的运算符'||'
+    {
+        word[0]=code[codePointer];
+        if(code[codePointer+1]=='|')
+        {
+            word[1]=code[++codePointer];
+        }
+        else
+        {
+            word[1]='\0';
+        }
+        number=Search(PT,word);
+        if(number==-1)
+        {
+            strcpy(PT[PTSize],word);
+            PTSize++;
+            number=PTSize;
+        }
+        PTtoken[number].type="PT";
+        PTtoken[number].typeTSize=number;
+        Token[num].type="PT";
+        Token[num].typeTSize=number;
+        num++;
+        cout<<"("<<PTtoken[number].type<<","<<PTtoken[number].typeTSize<<"),";
+        codePointer++;
+    }
+    else if(code[codePointer]=='+'||code[codePointer]=='-'||code[codePointer]=='*'||code[codePointer]=='/')//两个字节的运算符'+='、'-='、'*='、'/='
+    {
+        word[0]=code[codePointer];
+        if(code[codePointer+1]=='=')
+        {
+            word[1]=code[++codePointer];
+        }
+        else
+        {
+            word[1]='\0';
+        }
+        number=Search(PT,word);
+        if(number==-1)
+        {
+            strcpy(PT[PTSize],word);
+            PTSize++;
+            number=PTSize;
+        }
+        PTtoken[number].type="PT";
+        PTtoken[number].typeTSize=number;
+        Token[num].type="PT";
+        Token[num].typeTSize=number;
+        num++;
+        cout<<"("<<PTtoken[number].type<<","<<PTtoken[number].typeTSize<<"),";
+        codePointer++;
+    }
+    else if(code[codePointer]=='$')//强制结束
+    {
+        state=0;
+    }
+    else
+    {
+        state=0;
+    }
+    }
+}
+
+
+int main()
+{
+    char code[10000];
+    char word[30]={0};
+    int state=-1;
+    int codePointer=0;
+    int num=0;
+    ifstream fp("daima.txt");//将文本读取的内容全部放入fp中
+    if(!fp.is_open())//成功打开返回1，失败0
+    {
+        cout<<"文件打开失败";
+    }
+    fp.seekg(0,ios::beg);//指针fp从文件开头向后移动0个字节，即指向第一个字节
+    while(!fp.eof())//检测是否到达文件尾，如果到达文件尾返回非0值
+    {
+        fp.read((char*)&code[codePointer],1);//每次读一个字节到code里
+        codePointer++;
+    }
+    code[++codePointer]='\0';//字符串结束标志
+    fp.close();
+    cout<<"输入代码为："<<endl;
+    cout<<code<<endl;
+    codePointer=0;
+    cout<<"TOKEN序列如下："<<endl;
+    while(state!=0)
+    {
+        readAWord(state,code,word,codePointer,num);
+        num--;
+        cout<<"("<<Token[num].type<<","<<Token[num].typeTSize<<"),";
+        num++;
+    }
+    //cout<<synbl[3].name;
+    //for(int i=1;i<7;i++)
+    //{
+        //cout<<synbl[i].name<<" "<<synbl[i].type<<" "<<synbl[i].cat<<endl;
+    //}
+    return 0;
+}
